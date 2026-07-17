@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Send, CheckCircle2, AlertCircle, MessageCircle } from 'lucide-react';
 
-type Status = 'idle' | 'loading' | 'success' | 'error';
+const WHATSAPP_NUMBER = '60192282166';
+
+type Status = 'idle' | 'success' | 'error';
 
 export default function ContactForm() {
   const [status, setStatus] = useState<Status>('idle');
@@ -12,11 +13,8 @@ export default function ContactForm() {
   const update = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (status === 'loading') return;
-    setStatus('loading');
-    setErrorMsg('');
 
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       setStatus('error');
@@ -30,18 +28,18 @@ export default function ContactForm() {
       return;
     }
 
-    const { error } = await supabase.from('contact_inquiries').insert({
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim() || null,
-      message: form.message.trim(),
-    });
+    const lines = [
+      `Name: ${form.name.trim()}`,
+      `Email: ${form.email.trim()}`,
+      form.phone.trim() ? `Phone: ${form.phone.trim()}` : null,
+      '',
+      form.message.trim(),
+    ].filter(Boolean);
 
-    if (error) {
-      setStatus('error');
-      setErrorMsg('Something went wrong. Please try again or call us directly.');
-      return;
-    }
+    const text = encodeURIComponent(
+      `Hello Nadi Tulin Enterprise, I'd like to inquire:\n\n${lines.join('\n')}`,
+    );
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank', 'noopener,noreferrer');
 
     setStatus('success');
     setForm({ name: '', email: '', phone: '', message: '' });
@@ -126,27 +124,21 @@ export default function ContactForm() {
       {status === 'success' && (
         <div className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
           <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-          Thank you! Your message has been sent. We'll get back to you soon.
+          Opening WhatsApp with your message... Thank you for reaching out!
         </div>
       )}
 
       <button
         type="submit"
-        disabled={status === 'loading'}
-        className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-white shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-70"
+        className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-7 py-3.5 text-sm font-semibold text-white shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow"
       >
-        {status === 'loading' ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Sending...
-          </>
-        ) : (
-          <>
-            <Send className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-            Send Message
-          </>
-        )}
+        <MessageCircle className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
+        Send via WhatsApp
       </button>
+
+      <p className="text-center text-xs text-ink/50">
+        Your message will open in WhatsApp — no account needed to send.
+      </p>
     </form>
   );
 }
